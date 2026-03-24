@@ -68,4 +68,4 @@ flet build apk
 Проект распространяется под **SlySquad Non-Commercial License v1.0**.
 
 Коммерческое использование **запрещено**.  
-Подробности — в файле [LICENSE](LICENSE).
+Подробности — в файле [LICENSE](LICENSE.md).
