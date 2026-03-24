@@ -1,4 +1,4 @@
-# SlySquad Non-Commercial License v1.0
+# SkySquad Non-Commercial License v1.0
 
 Copyright © 2026 Korand Dev. Все права защищены.
 
