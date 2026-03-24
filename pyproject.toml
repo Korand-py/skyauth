@@ -1,0 +1,23 @@
+[project]
+name = "SkyAuth"
+version = "1.0.0"
+description = "Менеджер 2FA ключей"
+
+[tool.flet]
+
+product = "SkyAuth"
+
+org = "ru.skysquad.auth"
+
+company = "SkySquad"
+
+[tool.flet.android]
+
+package_name = "ru.skysquad.skyauth"
+
+icon = "assets/icon_app_android.png"
+
+[tool.flet.splash]
+color = "#000000"
+dark_color = "#000000"
+android = true
