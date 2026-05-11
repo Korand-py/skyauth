@@ -5,10 +5,7 @@ import time
 import json
 import asyncio
 import os
-from flet import LocalAuthentication
 keys = "keys.json"
-
-print(f"Flet version from package: {ft.__version__}")
 
 async def main(page: ft.Page):
     print("Приложение запущено")
@@ -22,9 +19,11 @@ async def main(page: ft.Page):
     page.adaptive = True
     page.theme_mode = ft.ThemeMode.DARK
     
+    
     # Основные переменные
-    data = "keys.json"
+    data = keys
     Protection_status = True
+    visible_key = False
     # --- Загрузка данных из JSON ---
     def load_data():
         if os.path.exists(keys):
@@ -46,8 +45,6 @@ async def main(page: ft.Page):
     # Блок уведомлений (по умолчанию кол-во ключей)
     count_keys = ft.Chip(label=ft.Text(f"Всего ключей: {len(data)}", size=18), leading=ft.Icon(
         icon=ft.Icons.KEY), color=ft.Colors.GREY_900)
-    
-    
     
     # --- Поля формы ---
     tb1 = ft.TextField(label="Сервис", width=250, color=ft.Colors.GREY)
@@ -72,6 +69,7 @@ async def main(page: ft.Page):
             new_item = {
                 'service': service,
                 'secret_key': secret_key,
+                'pinned': False,
                 'last_update': time.ctime(time_key)
             }
             
@@ -141,7 +139,7 @@ async def main(page: ft.Page):
         save_data(data)
         update_cards()
         
-        count_keys.label = ft.Text("Все ключи обновились", sizFe=18)
+        count_keys.label = ft.Text("Все ключи обновились", size=18)
         page.update()
         await asyncio.sleep(3)
         count_keys.label = ft.Text(f"Всего ключей: {len(data)}", size=18)
@@ -166,60 +164,83 @@ async def main(page: ft.Page):
         try:
             totp = pyotp.TOTP(item["secret_key"])
             code = totp.now()
-            return ft.Card(bgcolor=ft.Colors.ON_SURFACE,
-                content=ft.Container(
-                    content=ft.Column([
-                        ft.Row([
-                            ft.Text(item["service"], size=20, weight=ft.FontWeight.BOLD, expand=True),
-                            ft.Text(f"{code}", size=20, color=ft.Colors.BLUE, selectable=True),
-                            ft.IconButton(
-                                icon=ft.Icons.DELETE,
-                                icon_color=ft.Colors.RED,
-                                bgcolor=ft.Colors.TRANSPARENT,
-                                on_click=lambda e, idx=index: delete_card(e, idx),
-                                icon_size=20,
-                                disabled=Protection_status
-                            )
-                        ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
-                        ft.Text(f"Обновлено: {item['last_update']}", size=12, color=ft.Colors.GREY_500)
-                    ]),
-                    padding=10,
-                    width=300,
-                    bgcolor="#161515",
-                    border_radius=10
-                ),
-                elevation=5,
-                margin=10,
-                
-                
-            )
-        except:
+            if visible_key:
+                text_code = ft.Text(f"{code}", size=20, color=ft.Colors.BLUE, selectable=True)
+            else:
+                text_code = ft.Text("******", size=20, color=ft.Colors.BLUE, selectable=True)
             return ft.Card(
-                content=ft.Container(
-                    content=ft.Column([
-                        ft.Text(f"   Ошибка ключа: {item['service']}", color=ft.Colors.RED),
-                        ft.Text("Неверный формат ключа", size=12, color=ft.Colors.RED),
-                        ft.IconButton(
-                                icon=ft.Icons.DELETE,
-                                icon_color=ft.Colors.RED,
-                                bgcolor=ft.Colors.TRANSPARENT,
-                                on_click=lambda e, idx=index: delete_card(e, idx),
-                                icon_size=20,
-                                disabled=False,
-                                alignment=ft.Alignment.BOTTOM_RIGHT
-                            )
-                    ]),
-                    width=300,
-                    border_radius=10,
-                    bgcolor="#161515",
-                )
+            bgcolor=ft.Colors.ON_SURFACE,
+            content=ft.Container(
+                content=ft.Column([
+                    ft.Row([
+                ft.Text(item["service"], size=20, weight=ft.FontWeight.BOLD, expand=True),
+                text_code,
+                ft.Row([
+                    ft.IconButton(
+                    icon=ft.Icons.STAR,
+            icon_color=ft.Colors.YELLOW if item.get('pinned', True) else ft.Colors.GREY,
+            bgcolor=ft.Colors.TRANSPARENT,
+            on_click=lambda e, idx=index: toggle_pin(e, idx),
+            icon_size=20, padding=0, height=30, width=30),
+                    ft.IconButton(
+                    icon=ft.Icons.DELETE,
+            icon_color=ft.Colors.RED,
+            bgcolor=ft.Colors.TRANSPARENT,
+            on_click=lambda e, idx=index: delete_card(e, idx),
+            icon_size=20,
+            disabled=Protection_status, padding=0, height=30, width=30),
+                ], spacing=0)
+                
+            ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+            ft.Text(f"Обновлено: {item['last_update']}", size=12, color=ft.Colors.GREY_500)
+        ]),
+        padding=20,
+        width=300,
+        bgcolor="#161515",
+        border_radius=10
+            ),
+            elevation=5,
+            margin=10
+        )
+        except Exception as ex:
+        # Безопасное получение названия сервиса
+            service_name = item.get('service', 'Неизвестный сервис')
+            return ft.Card(
+            content=ft.Container(
+                content=ft.Column([
+            ft.Text(f"Ошибка ключа: {service_name}", color=ft.Colors.RED),
+            ft.Text("Неверный формат ключа", size=12, color=ft.Colors.RED),
+            ft.IconButton(
+                icon=ft.Icons.DELETE,
+                icon_color=ft.Colors.RED,
+                bgcolor=ft.Colors.TRANSPARENT,
+                on_click=lambda e, idx=index: delete_card(e, idx),
+                icon_size=20,
+                disabled=False,
+                alignment=ft.Alignment.BOTTOM_RIGHT
             )
+        ]),
+        width=300,
+        border_radius=10,
+        bgcolor="#161515"
+            )
+        )
+
     
     # * --- Обновление карточек ---
     def update_cards():
         cards_column.controls.clear()
-        for i, item in enumerate(data):
-            card = create_card_code(item, i)
+
+    # Сначала добавляем закреплённые карточки (где pinned == True)
+        pinned_items = [item for item in data if item.get('pinned', False)]
+        for i, item in enumerate(pinned_items):
+            card = create_card_code(item, data.index(item))
+            cards_column.controls.append(card)
+
+    # Затем добавляем обычные карточки (где pinned == False)
+        normal_items = [item for item in data if not item.get('pinned', False)]
+        for i, item in enumerate(normal_items):
+            card = create_card_code(item, data.index(item))
             cards_column.controls.append(card)
         
         if not data:
@@ -235,13 +256,22 @@ async def main(page: ft.Page):
         
         count_keys.label = f"Всего ключей: {len(data)}"
         cards_column.update()
-    
+
     # --- Контейнер для карточек ---
     cards_column = ft.Column(
         spacing=10,
         scroll=ft.ScrollMode.AUTO,
         horizontal_alignment=ft.CrossAxisAlignment.CENTER
     )
+
+    # * изменение света карточки
+    def toggle_pin(e, index):
+        if 0 <= index < len(data):
+            # Меняем статус закрепления на противоположный
+            data[index]['pinned'] = not data[index].get('pinned', False)
+            save_data(data)  # Сохраняем изменения в файл
+            update_cards()  # Обновляем отображение карточек
+            page.update()
 
     # --- Переключатель защиты ---
     
@@ -258,9 +288,9 @@ async def main(page: ft.Page):
     
     # Обновляем только отображение кнопок удаления
         update_cards()
-    
     # Обновляем состояние кнопки удаления всех кодов
         delete_all_codes_button.disabled = Protection_status
+        page.update()
 
 
 
@@ -285,7 +315,7 @@ async def main(page: ft.Page):
             )
 
     # --- Скачивание и загрузка файла keys.json
-        # --- в Beta 1.1.0
+        # --- в Beta 1.1
     global content_text
     content_text = ""
     def open_keys_dialog(e):
@@ -306,7 +336,7 @@ async def main(page: ft.Page):
         setting_dialog.open = False
         dialog_file_key.open = True
         page.update()
-
+    
     dialog_file_key = ft.AlertDialog(
         title=ft.Row([ft.Text("keys.json")]),
         modal=True,
@@ -335,7 +365,12 @@ async def main(page: ft.Page):
             )
         ]
     )
+    
     # --- Диалог настроек ---
+    def close_setting_dialog():
+        setting_dialog.open = False
+        page.update()
+        
     setting_dialog = ft.AlertDialog(
     modal=True,
     shape=ft.RoundedRectangleBorder(
@@ -356,8 +391,7 @@ async def main(page: ft.Page):
                 icon=ft.Icons.DOWNLOAD,
                 icon_color=ft.Colors.GREEN,
                 bgcolor=ft.Colors.TRANSPARENT,
-                on_click=lambda e: open_keys_dialog(None)
-)
+                on_click=lambda e: open_keys_dialog(None))
         ]),
         ft.Divider(height=20),
         ft.Row([
@@ -366,11 +400,11 @@ async def main(page: ft.Page):
         ]),
         ft.Divider(height=20, color=ft.Colors.TRANSPARENT),
         ft.Text("SkyAuth Beta v1.1", size=12, color=ft.Colors.GREY_500)
-    ], width=300, height=200),
+    ], width=300, height=210),
     actions=[
         ft.TextButton(
             "Закрыть", 
-            on_click=lambda e: setattr(setting_dialog, 'open', False),
+            on_click=close_setting_dialog,
             style=ft.ButtonStyle(color=ft.Colors.BLUE)
         )
     ]
@@ -383,14 +417,26 @@ async def main(page: ft.Page):
         bgcolor=ft.Colors.BLUE,
         on_click=lambda e: setattr(setting_dialog, 'open', True)
     )
+    def ghost_mode(e):
+        nonlocal visible_key
+        visible_key = not visible_key  # Переключение состояния
+        if visible_key == True:
+            ghost_mode_btn.icon = ft.Icons.KEY
+        else:
+            ghost_mode_btn.icon = ft.Icons.KEY_OFF
+        update_cards()
+        page.update()
+    ghost_mode_btn = ft.IconButton(icon=ft.Icons.KEY_OFF,
+                                icon_color="#0077FF",
+                                bgcolor=ft.Colors.TRANSPARENT,
+                                on_click=ghost_mode)
     
-
     page.overlay.extend([dialog_add_key, setting_dialog, dialog_file_key])
     
     main_content = ft.Column([
     ft.Image(src="assets/icon_app.png", width=80, height=80),
     ft.Divider(height=12, color=ft.Colors.TRANSPARENT),
-    count_keys,
+    ft.Row([count_keys, ghost_mode_btn], alignment=ft.MainAxisAlignment.CENTER),
     ft.Divider(height=10, color=ft.Colors.TRANSPARENT),
     # ОСНОВНОЙ КОНТЕНТ (карточки)
     ft.Container(
@@ -419,11 +465,9 @@ async def main(page: ft.Page):
 spacing=0,
 expand=True,
 horizontal_alignment=ft.CrossAxisAlignment.CENTER)
-    
     page.add(main_content)
     update_cards()
     page.update()
-    
 ft.app(
     target=main,
     assets_dir="assets",

@@ -1,1 +1,20 @@
-[]
+[
+  {
+    "service": "Test1",
+    "secret_key": "FUWK3M6VWQG2QFCL",
+    "pinned": false,
+    "last_update": "Mon May 11 20:42:51 2026"
+  },
+  {
+    "service": "Test2",
+    "secret_key": "FUWK3M6VWQG2QFCL",
+    "pinned": false,
+    "last_update": "Mon May 11 20:43:05 2026"
+  },
+  {
+    "service": "Test3",
+    "secret_key": "FUWK3M6VWQG2QFCL",
+    "pinned": true,
+    "last_update": "Mon May 11 20:43:18 2026"
+  }
+]
